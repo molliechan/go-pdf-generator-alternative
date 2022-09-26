@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  pdf-gotenberg:
+    image: gotenberg/gotenberg:7
+    ports: 
+      - "3000:3000"
+    command: #Do not redefine the entrypoint, but override the command instead. See this issue for more details.
+      - "gotenberg"
