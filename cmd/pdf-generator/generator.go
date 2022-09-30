@@ -1,30 +1,48 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/molliechan/go-pdf-generator-alternative/internal/gotenberg"
 	"github.com/molliechan/go-pdf-generator-alternative/internal/template"
 	"github.com/molliechan/go-pdf-generator-alternative/internal/user"
 )
 
-type PDFService struct{}
-
-const (
-	hostName      = "http://localhost:3000"
-	requestURL    = "/forms/chromium/convert/html"
-	timeout       = 10
-)
-
-func NewPDFService() *PDFService {
-	return &PDFService{}
+type PDFService struct {
+	logger Logger
 }
 
-func (p PDFService) generatePDF(templ string, data interface{}, dest string) error {
+type Logger interface {
+	Error(...interface{})
+	Info(...interface{})
+}
+
+const (
+	hostName   = "http://localhost:3000"
+	requestURL = "/forms/chromium/convert/html"
+	timeout    = 10
+)
+
+func NewPDFService(logger Logger) *PDFService {
+	return &PDFService{logger: logger}
+}
+
+func (p PDFService) generatePDF(templ string, data interface{}, dest string) bool {
+
+	p.logger.Info("started to parse template...")
+
 	// parse template
 	htmlBytes, err := template.ParseTemplate(templ, user.GetUser())
 	if err != nil {
-		return err
+		p.logger.Error(
+			"Fail to parse template",
+			err,
+		)
+		return false
 	}
 
+	p.logger.Info("started to convert pdf...")
+	
 	// create gotenberg client
 	client := &gotenberg.Client{Hostname: hostName}
 
@@ -35,8 +53,15 @@ func (p PDFService) generatePDF(templ string, data interface{}, dest string) err
 
 	err = client.Store(req, dest)
 	if err != nil {
-		return err
+		p.logger.Error(
+			"Fail to convert and store PDF",
+			err,
+		)
+		return false
 	}
 
-	return nil
+	p.logger.Info(
+		fmt.Sprintf("Successfully convert to %s", dest),
+	)
+	return true
 }
